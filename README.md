@@ -9,6 +9,10 @@ for the pairs and plots a Qc map.  Computations are done in GMT/netcdf
 compatible grids.  It depends on GMT for plotting and doing some initial
 grid computation.
 
+## Distribution
+
+This code is GPL. It can be obtained from: https://github.com/marcelobianchi/queraios
+
 ## Usage
 
 The code has a built in help message that can be used to get a quick start.
