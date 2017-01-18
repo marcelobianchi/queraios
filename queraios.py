@@ -29,6 +29,7 @@ from __future__ import division
 
 from scipy.io import netcdf_file as netcdf
 from scipy.misc import comb
+from scipy import version
 import numpy
 import glob
 import sys
@@ -39,10 +40,9 @@ import resource
 from optparse import OptionParser
 from optparse import OptionGroup
 
-
 def using(point=""):
     usage = resource.getrusage(resource.RUSAGE_SELF)
-    return '''%s: usertime=%s systime=%s mem=%.2f mb''' % (
+    return '''%s: User time=%s System time=%s Memory=%.2f mb''' % (
         point,
         usage[0],
         usage[1],
@@ -136,7 +136,7 @@ def hitcount(gds):
     return final
 
 
-def buildgrids(rays, limits, sps, resolution, basename, recreate=False, length=False):
+def buildgrids(rays, limits, sps, resolution, basename, dirname, recreate=False, length=False):
     R = "-R%f/%f/%f/%f" % limits
     I = "-I%f/%f"       % resolution
     i = 0
@@ -144,7 +144,7 @@ def buildgrids(rays, limits, sps, resolution, basename, recreate=False, length=F
         i += 1
         print("Computing grids %05d/%05d = %d %%" % (i, len(rays), 100 * i / len(rays)), end="\r")
 
-        filename = "data-%05d-%s.grd" % (i, basename)
+        filename = os.path.join(dirname,"data-%05d-%s.grd" % (i, basename))
         if recreate is False and os.path.isfile(filename):
             continue
 
@@ -197,6 +197,11 @@ def checkSystem():
         "blockmean",
         "xyz2grd"
     ]
+
+    top, middle, smaller = version.version.split(".")
+    if int(middle) < 15:
+        print("** Scipy version should be >= 0.15.0, current version is %s **" % version.version)
+        sys.exit(1)
 
     missing = []
 
@@ -262,6 +267,9 @@ if __name__ == "__main__":
     if not os.path.isfile(options.rayfile):
         parser.error("Could not find the ray file indicated.")
 
+    rayfile = os.path.basename(options.rayfile)
+    raydir  = os.path.dirname(options.rayfile)
+
     # Read Rays
     #
     rays = parserays(options.rayfile)
@@ -325,12 +333,12 @@ if __name__ == "__main__":
         print("*** Warning: Considering LENGTH and not recomputing grids.")
 
     buildgrids(rays, limits, options.sampling, resolution,
-               os.path.basename(options.rayfile), options.clean,
+               rayfile, raydir, options.clean,
                options.length)
 
-    pattern = "data-?????-%s.grd" % (options.rayfile)
-    output = "result-%s.grd" % (options.rayfile)
-    grids = []
+    pattern = os.path.join(raydir, "data-?????-%s.grd" % (rayfile))
+    output  = os.path.join(raydir, "result-%s.grd" % (rayfile))
+    grids   = []
 
     # Read grids
     #
@@ -376,7 +384,7 @@ if __name__ == "__main__":
     plotresults(output, options.rayfile, options.psfile, options.max_color, limits)
     options.psfile = options.psfile[:-3] + ".pdf" 
     if options.preview:
-        for tool in [ "preview", "evince", "atril", "okular", "gv", "gs", "xdg-open" ]:
+        for tool in [  "xdg-open", "evince", "atril", "okular", "gv", "gs", "open" ]:
             if os.system("which %s > /dev/null" % tool) == 0:
                 print("Launching %s" % tool)
                 os.system("%s %s 2> /dev/null" % (tool, options.psfile))
