@@ -40,14 +40,16 @@ Options:
                         Region coordinates (xmin/xmax/ymin/ymax)[Default is to
                         auto-compute].
     -I RESOLUTION, --resolution=RESOLUTION
-                        Region resolution (x,y) of grids (Default is 1.0)
+                        X/Y cell resolution in degrees (Default is -I1.0/1.0)
     -n, --no-clean      Don't clean before recomputing.
     -s SAMPLING, --sampling=SAMPLING
-                        Point sampling used during ray tracing over area.
+                        Point sampling used during ray tracing over area (km).
     -m MODE, --mode=MODE
                         Computation mode h: hitcount, x: cross hitcount
                         (Default).
-    -l, --length        Compute rays using real length.
+    -l, --length        Compute rays using real length. Normally a ray passing
+                        a cell counts 1, if this option is given, the ray will
+                        count the amount of km it was inside the cell.
     -u MAX_COLOR, --uppercolor=MAX_COLOR
                         Maximum of the color scale [Default is to auto-
                         compute].
