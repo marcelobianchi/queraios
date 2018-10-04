@@ -199,9 +199,10 @@ def checkSystem():
     ]
 
     top, middle, smaller = version.version.split(".")
-    if int(middle) < 15:
-        print("** Scipy version should be >= 0.15.0, current version is %s **" % version.version)
-        sys.exit(1)
+    if int(top) <= 0:
+        if int(middle) < 15:
+            print("** Scipy version should be >= 0.15.0, current version is %s **" % version.version)
+            sys.exit(1)
 
     missing = []
 
