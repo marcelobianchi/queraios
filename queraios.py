@@ -126,7 +126,7 @@ def combine(gds, norm = True):
         print("\n Considered %d of %d rays crossing paths." % (jj, tc))
         rr = rr / jj
     else:
-		print("Warning, not using normalization in cross-hitcount is useless")
+        print("Warning, not using normalization in cross-hitcount is useless")
 
     rr[rr == 0] = numpy.nan
     return rr
