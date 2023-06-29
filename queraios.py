@@ -28,7 +28,7 @@ from __future__ import print_function
 from __future__ import division
 
 from scipy.io import netcdf_file as netcdf
-from scipy.misc import comb
+from scipy.special import comb
 from scipy import version
 import numpy
 import glob
@@ -109,7 +109,7 @@ def combinereal(this, gds):
     return cc, jj, r
 
 
-def combine(gds):
+def combine(gds, norm = True):
     tc = comb(len(gds), 2)  # Total combinations possible
     cc = 0                  # Current combination
     jj = 0                  # Total considered combination
@@ -122,17 +122,22 @@ def combine(gds):
         cc += c
         print ('%09d [%03d %%]' % (jj, 100 * cc / tc), end="")
 
-    print("\n Considered %d of %d rays crossing paths." % (jj, tc))
-    rr = rr / jj
+    if norm is True:
+        print("\n Considered %d of %d rays crossing paths." % (jj, tc))
+        rr = rr / jj
+    else:
+		print("Warning, not using normalization in cross-hitcount is useless")
+
     rr[rr == 0] = numpy.nan
     return rr
 
 
-def hitcount(gds):
+def hitcount(gds, norm = True):
     final = gds[0] * 0.0
     for this in gds:
         final += this
-    final /= len(gds)
+    if norm:
+        final /= len(gds)
     return final
 
 
@@ -158,24 +163,26 @@ def buildgrids(rays, limits, sps, resolution, basename, dirname, recreate=False,
     print()
 
 
-def plotresults(datafile, rayfile, psfile, maxcolor, limits):
-    xinc = "%.3f" % (maxcolor / 5)
-    title = "Rays Cross Indicator (High is better)"
+def plotresults(datafile, limits, options):
+    xinc = "%.3f" % (options.max_color / 5)
+    title = "%s Indicator (High is better)" % ("Rays Cross" if options.mode == 'x' else 'Hitcount')
+    rayfile  = options.rayfile
+    psfile   = options.psfile
     R = "-R%f/%f/%f/%f" % limits
 
     os.system("gmtset PAPER_MEDIA a0")
-    os.system("grd2cpt   %s -L0/%f -Z -M  > la.cpt" % (datafile, maxcolor))
+    os.system("grd2cpt   %s -L0/%f -Z -M  > la.cpt" % (datafile, options.max_color))
 
     os.system("psbasemap %s -B15WsNE -JM11 -X3 -Yc -K > %s"                 % (R, psfile))
     os.system("grdview   %s -To -Cla.cpt -R -J -O -K >> %s"                 % (datafile, psfile))
     os.system("pscoast   -R -J -O -K -Na -W1p,black -A10000 >> %s"          % (psfile))
-    os.system('psscale   -D6/-1/10/0.5h -O -K -Cla.cpt -B%s:."%s": -E >> %s' % (xinc, title, psfile))
-    os.system("awk -v V='\n' '{print $1,$2,V$3,$4}' %s | sort -u | psxy -R -J -O -K -Sc0.2 -G200 -m >> %s" % (rayfile, psfile))
-    # os.system("awk -v V='\n' '{print \">\"V$1,$2,V$3,$4}' %s | psxy -R -J -O -K -W0.5p -m >> %s" % (rayfile, psfile))
+    os.system('psscale   -D6/-1/10/0.5h -O -K -Cla.cpt -B%s:"%s": -E >> %s' % (xinc, title, psfile))
 
     os.system("psbasemap -R -B15WsNE -J -X14  -K -O >> %s"                  % (psfile))
+    os.system("awk -v V='\n' '{print \">\"V$1,$2,V$3,$4}' %s | psxy -R -J -O -K -W0.5p,gray,.. -m >> %s"           % (rayfile, psfile))
+    os.system("awk '{print $1,$2}' %s | sort -u | psxy -R -J -O -K -St0.2 -Gblack -m >> %s" % (rayfile, psfile))
+    os.system("awk '{print $3,$4}' %s | sort -u | psxy -R -J -O -K -Sa0.2 -Gdarkred -m >> %s" % (rayfile, psfile))
     os.system("pscoast   -R -J -O -K -Na -W1p,black -A10000 >> %s"          % (psfile))
-    os.system("awk -v V='\n' '{print \">\"V$1,$2,V$3,$4}' %s | psxy -R -J -O -K -W1p,gray -m >> %s"           % (rayfile, psfile))
     os.system("echo '' | psxy -R -J -O >> %s"                               % (psfile))
 
     os.system("ps2raster -P -A -Tf %s"                                      % (psfile))
@@ -236,6 +243,7 @@ if __name__ == "__main__":
     opti.add_option("-n", "--no-clean",   help="Don't clean before recomputing.", action="store_false", default=True,     dest="clean")
     opti.add_option("-s", "--sampling",   help="Point sampling used during ray tracing over area (km).", default=1.0,     dest="sampling")
     opti.add_option("-m", "--mode",       help="Computation mode h: hitcount, x: cross hitcount (Default).", default='x', dest="mode")
+    opti.add_option("--no-norm",          help="Do not normalize by the total number of rays in area.", default=True, action='store_false', dest="norm")
     opti.add_option("-l", "--length",     help="Compute rays using real length. Normally a ray passing a cell counts 1, if this option is given, the ray will count the amount of km it was inside the cell.", action="store_true", default=False,     dest="length")
     opti.add_option("-u", "--uppercolor", help="Maximum of the color scale [Default is to auto-compute].", default=None,  dest="max_color")
     opti.add_option("-P", "--preview",    help="Preview the file created (Default off)", action="store_true", default=False, dest="preview")
@@ -361,9 +369,9 @@ if __name__ == "__main__":
     # Combine rays & analyse
     #
     if options.mode == 'x':
-        result = combine(grids)
+        result = combine(grids, options.norm)
     elif options.mode == 'h':
-        result = hitcount(grids)
+        result = hitcount(grids, options.norm)
 
     # Decide on color scale
     #
@@ -382,7 +390,7 @@ if __name__ == "__main__":
 
     # Plot Results
     #
-    plotresults(output, options.rayfile, options.psfile, options.max_color, limits)
+    plotresults(output, limits, options)
     options.psfile = options.psfile[:-3] + ".pdf" 
     if options.preview:
         for tool in [  "xdg-open", "evince", "atril", "okular", "gv", "gs", "open" ]:
