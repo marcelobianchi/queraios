@@ -47,7 +47,8 @@ Options:
     -m MODE, --mode=MODE
                         Computation mode h: hitcount, x: cross hitcount
                         (Default).
-    -l, --length        Compute rays using real length. Normally a ray passing
+     --no-norm           Do not normalize by the total number of rays in area.
+     -l, --length        Compute rays using real length. Normally a ray passing
                         a cell counts 1, if this option is given, the ray will
                         count the amount of km it was inside the cell.
     -u MAX_COLOR, --uppercolor=MAX_COLOR
